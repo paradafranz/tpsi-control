@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "name": "Mouse",
+    "price": 25,
+    "stock": 20
+  },
+  {
+    "id": 2,
+    "name": "Tastiera",
+    "price": 45,
+    "stock": 5
+  },
+  {
+    "id": 3,
+    "name": "Cuffie",
+    "price": 60,
+    "stock": 3
+  },
+  {
+    "id": 1773139376361,
+    "name": "Monitor",
+    "price": 90,
+    "stock": 4
+  }
+]

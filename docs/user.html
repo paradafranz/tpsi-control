@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vista Utente</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <h1>Vista Utente</h1>
+      <div class="row">
+        <a href="index.html"><button type="button">Home</button></a>
+        <button id="logoutBtn" type="button">Logout</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <p><strong>Utente loggato:</strong> <span id="userName">-</span></p>
+      <p><strong>Crediti:</strong> <span id="credits">-</span></p>
+      <p id="message"></p>
+    </div>
+
+    <div class="card">
+      <h2>Catalogo Prodotti</h2>
+      <div id="productsList"></div>
+    </div>
+  </div>
+
+  <script src="user.js"></script>
+</body>
+</html>

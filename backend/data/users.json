@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "name": "Mario",
+    "email": "mario@mail.com",
+    "password": "1234",
+    "role": "user",
+    "credits": 120
+  },
+  {
+    "id": 2,
+    "name": "Luisa",
+    "email": "luisa@mail.com",
+    "password": "1234",
+    "role": "user",
+    "credits": 80
+  },
+  {
+    "id": 99,
+    "name": "Admin",
+    "email": "admin@mail.com",
+    "password": "admin123",
+    "role": "admin",
+    "credits": 0
+  }
+]

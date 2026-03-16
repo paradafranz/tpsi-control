@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vista Admin</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <h1>Vista Admin</h1>
+      <div class="row">
+        <a href="index.html"><button type="button">Home</button></a>
+        <button id="logoutBtn" type="button">Logout</button>
+      </div>
+    </div>
+
+    <p id="adminMessage"></p>
+
+    <div class="card">
+      <h2>Aggiungi Prodotto</h2>
+      <div class="row">
+        <input type="text" id="productName" placeholder="Nome prodotto" />
+        <input type="number" id="productPrice" placeholder="Prezzo" />
+        <input type="number" id="productStock" placeholder="Stock" />
+        <button id="addProductBtn">Aggiungi</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Assegna Crediti Bonus</h2>
+      <div class="row">
+        <select id="bonusUserSelect"></select>
+        <input type="number" id="bonusAmount" placeholder="Crediti bonus" />
+        <button id="addCreditsBtn">Assegna</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Gestione Stock</h2>
+      <div id="adminProductsList"></div>
+    </div>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>
