@@ -10,6 +10,9 @@ const PORT = process.env.PORT || 3000;
 const USERS_FILE = path.join(__dirname, "data", "users.json");
 const PRODUCTS_FILE = path.join(__dirname, "data", "products.json");
 
+console.log("USERS_FILE:", USERS_FILE);
+console.log("PRODUCTS_FILE:", PRODUCTS_FILE);
+
 const ALLOWED_ORIGINS = [
   "http://127.0.0.1:5500",
   "http://localhost:5500",
