@@ -13,9 +13,13 @@ const PRODUCTS_FILE = path.join(__dirname, "data", "products.json");
 const ALLOWED_ORIGINS = [
   "http://127.0.0.1:5500",
   "http://localhost:5500",
+  "http://127.0.0.1:5501",
+  "http://localhost:5501",
+  "http://127.0.0.1:5502",
+  "http://localhost:5502",
   "http://127.0.0.1:3000",
   "http://localhost:3000",
-  "https://paradafranz.github.io/tpsi-control/" // cambia questo quando pubblichi
+  "https://paradafranz.github.io"
 ];
 
 const sessions = new Map(); // token -> { userId, role, expiresAt }
