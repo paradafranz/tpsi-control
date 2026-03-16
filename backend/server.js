@@ -60,8 +60,9 @@ async function readJson(filePath) {
   const data = await fs.readFile(filePath, "utf-8");
   return JSON.parse(data);
 }
-
+//piccolo debug
 async function writeJson(filePath, data) {
+  console.log("SCRIVO FILE:", filePath);
   await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
 }
 
