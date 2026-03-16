@@ -15,12 +15,12 @@
     "id": 3,
     "name": "Cuffie",
     "price": 60,
-    "stock": 3
+    "stock": 5
   },
   {
     "id": 1773139376361,
     "name": "Monitor",
     "price": 90,
-    "stock": 4
+    "stock": 5
   }
 ]
