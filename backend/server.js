@@ -15,7 +15,7 @@ const ALLOWED_ORIGINS = [
   "http://localhost:5500",
   "http://127.0.0.1:3000",
   "http://localhost:3000",
-  "https://TUO-USERNAME.github.io" // cambia questo quando pubblichi
+  "https://paradafranz.github.io/tpsi-control/" // cambia questo quando pubblichi
 ];
 
 const sessions = new Map(); // token -> { userId, role, expiresAt }
