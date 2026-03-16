@@ -69,8 +69,10 @@ async function readJson(filePath) {
   return JSON.parse(data);
 }
 //piccolo debug
+
 async function writeJson(filePath, data) {
-  console.log("SCRIVO FILE:", filePath);
+  console.log("Sto scrivendo su:", filePath);
+  console.log("Contenuto scritto:", JSON.stringify(data, null, 2));
   await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
 }
 
@@ -274,6 +276,8 @@ app.post("/api/purchase", authRequired, async (req, res, next) => {
 
       user.credits -= product.price;
       product.stock -= 1;
+      //altro debug per il json
+      console.log("PRIMA DEL SALVATAGGIO:", { user, product });
 
       await writeJson(USERS_FILE, users);
       await writeJson(PRODUCTS_FILE, products);
