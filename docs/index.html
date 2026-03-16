@@ -3,18 +3,40 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>E-Commerce</title>
+  <title>E-Commerce Demo</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
-    <h1>E-Commerce Distribuito</h1>
+    <h1>E-Commerce Demo</h1>
+
     <div class="card">
-      <p>Seleziona una vista:</p>
+      <p>
+        Progetto client-server in HTML, CSS, Vanilla JavaScript e Node.js.
+      </p>
+      <p>
+        La demo prevede due ruoli distinti: utente e admin.
+      </p>
+
       <div class="row">
-        <a href="login.html?role=user"><button>Vista Utente</button></a>
-        <a href="login.html?role=admin"><button>Vista Admin</button></a>
+        <a href="login.html?role=user">
+          <button type="button">Accedi come Utente</button>
+        </a>
+
+        <a href="login.html?role=admin">
+          <button type="button">Accedi come Admin</button>
+        </a>
       </div>
+    </div>
+
+    <div class="card">
+      <h2>Funzionalità principali</h2>
+      <ul>
+        <li>Visualizzazione catalogo prodotti</li>
+        <li>Acquisto con controllo crediti e stock</li>
+        <li>Dashboard admin per prodotti e crediti</li>
+        <li>Controlli lato server su sicurezza e validazione</li>
+      </ul>
     </div>
   </div>
 </body>

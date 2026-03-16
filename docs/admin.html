@@ -9,22 +9,27 @@
 <body>
   <div class="container">
     <div class="topbar">
-      <h1>Vista Admin</h1>
+      <h1>Dashboard Admin</h1>
       <div class="row">
         <a href="index.html"><button type="button">Home</button></a>
         <button id="logoutBtn" type="button">Logout</button>
       </div>
     </div>
 
-    <p id="adminMessage"></p>
+    <p id="adminMessage" class="message"></p>
+
+    <div class="card">
+      <h2>Riepilogo</h2>
+      <div id="summaryBox"></div>
+    </div>
 
     <div class="card">
       <h2>Aggiungi Prodotto</h2>
       <div class="row">
         <input type="text" id="productName" placeholder="Nome prodotto" />
-        <input type="number" id="productPrice" placeholder="Prezzo" />
-        <input type="number" id="productStock" placeholder="Stock" />
-        <button id="addProductBtn">Aggiungi</button>
+        <input type="number" id="productPrice" placeholder="Prezzo" min="0" step="0.01" />
+        <input type="number" id="productStock" placeholder="Stock" min="0" step="1" />
+        <button id="addProductBtn" type="button">Aggiungi</button>
       </div>
     </div>
 
@@ -32,8 +37,8 @@
       <h2>Assegna Crediti Bonus</h2>
       <div class="row">
         <select id="bonusUserSelect"></select>
-        <input type="number" id="bonusAmount" placeholder="Crediti bonus" />
-        <button id="addCreditsBtn">Assegna</button>
+        <input type="number" id="bonusAmount" placeholder="Crediti bonus" min="1" step="1" />
+        <button id="addCreditsBtn" type="button">Assegna</button>
       </div>
     </div>
 
