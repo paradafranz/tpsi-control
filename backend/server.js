@@ -10,13 +10,8 @@ const PORT = process.env.PORT || 3000;
 const USERS_FILE = path.join(__dirname, "data", "users.json");
 const PRODUCTS_FILE = path.join(__dirname, "data", "products.json");
 
-console.log("USERS_FILE:", USERS_FILE);
-console.log("PRODUCTS_FILE:", PRODUCTS_FILE);
-
-
-console.log("__dirname:", __dirname);
-console.log("USERS_FILE:", USERS_FILE);
-console.log("PRODUCTS_FILE:", PRODUCTS_FILE);
+const FRONTEND_ORIGIN =
+  process.env.FRONTEND_ORIGIN || "https://paradafranz.github.io";
 
 const ALLOWED_ORIGINS = [
   "http://127.0.0.1:5500",
@@ -27,30 +22,27 @@ const ALLOWED_ORIGINS = [
   "http://localhost:5502",
   "http://127.0.0.1:3000",
   "http://localhost:3000",
-  "https://paradafranz.github.io"
+  FRONTEND_ORIGIN
 ];
 
 const sessions = new Map(); // token -> { userId, role, expiresAt }
 const loginAttempts = new Map(); // ip -> { count, firstAttempt }
 
-const SESSION_DURATION_MS = 1000 * 60 * 60 * 2; // 2 ore
-const LOGIN_WINDOW_MS = 1000 * 60 * 10; // 10 minuti
+const SESSION_DURATION_MS = 1000 * 60 * 60 * 2;
+const LOGIN_WINDOW_MS = 1000 * 60 * 10;
 const MAX_LOGIN_ATTEMPTS = 10;
 
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin) return callback(null, true); // Postman, curl, ecc.
-    if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
-    return callback(new Error("Origin non consentita da CORS"));
-  }
-}));
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin) return callback(null, true);
+      if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+      return callback(new Error("Origin non consentita da CORS"));
+    }
+  })
+);
 
 app.use(express.json({ limit: "50kb" }));
-//
-app.use((req, res, next) => {
-  console.log("REQUEST:", req.method, req.url);
-  next();
-});
 
 app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
@@ -73,11 +65,8 @@ async function readJson(filePath) {
   const data = await fs.readFile(filePath, "utf-8");
   return JSON.parse(data);
 }
-//piccolo debug
 
 async function writeJson(filePath, data) {
-  console.log("Sto scrivendo su:", filePath);
-  console.log("Contenuto scritto:", JSON.stringify(data, null, 2));
   await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
 }
 
@@ -130,7 +119,6 @@ function requireRole(role) {
 function loginRateLimit(req, res, next) {
   const ip = req.ip || req.connection.remoteAddress || "unknown";
   const now = Date.now();
-
   const record = loginAttempts.get(ip);
 
   if (!record) {
@@ -168,25 +156,30 @@ app.get("/", (req, res) => {
   });
 });
 
-/**
- * LOGIN
- */
+/* LOGIN */
 app.post("/api/login", loginRateLimit, async (req, res, next) => {
   try {
     const email = String(req.body.email || "").trim().toLowerCase();
     const password = String(req.body.password || "").trim();
 
     if (!email || !password) {
-      return res.status(400).json({ error: "Email e password obbligatorie" });
+      return res.status(400).json({
+        error: "Email e password obbligatorie"
+      });
     }
 
     const users = await readJson(USERS_FILE);
+
     const user = users.find(
-      u => String(u.email).toLowerCase() === email && u.password === password
+      u =>
+        String(u.email).toLowerCase() === email &&
+        String(u.password) === password
     );
 
     if (!user) {
-      return res.status(401).json({ error: "Credenziali non valide" });
+      return res.status(401).json({
+        error: "Credenziali non valide"
+      });
     }
 
     const token = crypto.randomBytes(24).toString("hex");
@@ -207,17 +200,13 @@ app.post("/api/login", loginRateLimit, async (req, res, next) => {
   }
 });
 
-/**
- * LOGOUT
- */
+/* LOGOUT */
 app.post("/api/logout", authRequired, (req, res) => {
   sessions.delete(req.token);
   res.json({ message: "Logout effettuato" });
 });
 
-/**
- * UTENTE CORRENTE
- */
+/* UTENTE CORRENTE */
 app.get("/api/me", authRequired, async (req, res, next) => {
   try {
     const users = await readJson(USERS_FILE);
@@ -233,9 +222,7 @@ app.get("/api/me", authRequired, async (req, res, next) => {
   }
 });
 
-/**
- * CATALOGO PUBBLICO
- */
+/* CATALOGO PUBBLICO */
 app.get("/api/products", async (req, res, next) => {
   try {
     const products = await readJson(PRODUCTS_FILE);
@@ -245,9 +232,7 @@ app.get("/api/products", async (req, res, next) => {
   }
 });
 
-/**
- * ACQUISTO PRODOTTO (solo utente loggato)
- */
+/* ACQUISTO PRODOTTO */
 app.post("/api/purchase", authRequired, async (req, res, next) => {
   try {
     const productId = parseId(req.body.productId);
@@ -281,8 +266,6 @@ app.post("/api/purchase", authRequired, async (req, res, next) => {
 
       user.credits -= product.price;
       product.stock -= 1;
-      //altro debug per il json
-      console.log("PRIMA DEL SALVATAGGIO:", { user, product });
 
       await writeJson(USERS_FILE, users);
       await writeJson(PRODUCTS_FILE, products);
@@ -298,9 +281,7 @@ app.post("/api/purchase", authRequired, async (req, res, next) => {
   }
 });
 
-/**
- * ADMIN - LISTA UTENTI (senza password)
- */
+/* ADMIN - LISTA UTENTI */
 app.get("/api/admin/users", authRequired, requireRole("admin"), async (req, res, next) => {
   try {
     const users = await readJson(USERS_FILE);
@@ -310,9 +291,7 @@ app.get("/api/admin/users", authRequired, requireRole("admin"), async (req, res,
   }
 });
 
-/**
- * ADMIN - NUOVO PRODOTTO
- */
+/* ADMIN - NUOVO PRODOTTO */
 app.post("/api/admin/products", authRequired, requireRole("admin"), async (req, res, next) => {
   try {
     const name = String(req.body.name || "").trim();
@@ -362,9 +341,7 @@ app.post("/api/admin/products", authRequired, requireRole("admin"), async (req, 
   }
 });
 
-/**
- * ADMIN - MODIFICA STOCK
- */
+/* ADMIN - MODIFICA STOCK */
 app.patch("/api/admin/products/:id/stock", authRequired, requireRole("admin"), async (req, res, next) => {
   try {
     const productId = parseId(req.params.id);
@@ -399,9 +376,7 @@ app.patch("/api/admin/products/:id/stock", authRequired, requireRole("admin"), a
   }
 });
 
-/**
- * ADMIN - BONUS CREDITI
- */
+/* ADMIN - BONUS CREDITI */
 app.post("/api/admin/users/:id/credits", authRequired, requireRole("admin"), async (req, res, next) => {
   try {
     const userId = parseId(req.params.id);
@@ -436,9 +411,7 @@ app.post("/api/admin/users/:id/credits", authRequired, requireRole("admin"), asy
   }
 });
 
-/**
- * ADMIN - DASHBOARD SUMMARY
- */
+/* ADMIN - DASHBOARD */
 app.get("/api/admin/summary", authRequired, requireRole("admin"), async (req, res, next) => {
   try {
     const users = await readJson(USERS_FILE);
@@ -460,16 +433,12 @@ app.get("/api/admin/summary", authRequired, requireRole("admin"), async (req, re
   }
 });
 
-/**
- * 404 API
- */
+/* 404 API */
 app.use("/api", (req, res) => {
   res.status(404).json({ error: "Endpoint API non trovato" });
 });
 
-/**
- * ERROR HANDLER
- */
+/* ERROR HANDLER */
 app.use((error, req, res, next) => {
   console.error("[SERVER ERROR]", error);
 
@@ -477,9 +446,7 @@ app.use((error, req, res, next) => {
     return res.status(403).json({ error: "Richiesta bloccata da CORS" });
   }
 
-  res.status(500).json({
-    error: "Errore interno del server"
-  });
+  res.status(500).json({ error: "Errore interno del server" });
 });
 
 app.listen(PORT, () => {
