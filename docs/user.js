@@ -1,7 +1,7 @@
 const API_BASE_URL =
-  !location.hostname || location.hostname === "localhost" || location.hostname === "127.0.0.1"
+  window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
     ? "http://localhost:3000"
-    : "https://tpsi-verifica.onrender.com";
+    : "https://tpsi-control.onrender.com";
 
 const token = localStorage.getItem("token");
 const storedUser = JSON.parse(localStorage.getItem("user") || "null");
@@ -14,7 +14,7 @@ const messageP = document.getElementById("message");
 function redirectToLogin() {
   localStorage.removeItem("token");
   localStorage.removeItem("user");
-  window.location.href = "login.html?role=user";
+  window.location.href = "login.html";
 }
 
 if (!token || !storedUser) {
@@ -41,7 +41,6 @@ async function fetchJson(url, options = {}) {
   });
 
   let data = null;
-
   try {
     data = await response.json();
   } catch {
@@ -138,10 +137,8 @@ function createProductCard(product, currentCredits) {
 
       setMessage(result.message, "success");
 
-      await Promise.all([
-        loadCurrentUser(),
-        loadProducts()
-      ]);
+      await loadCurrentUser();
+      await loadProducts();
     } catch (error) {
       setMessage(error.message, "error");
       btn.disabled = false;
