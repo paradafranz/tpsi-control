@@ -1,7 +1,7 @@
 const API_BASE_URL =
-  !location.hostname || location.hostname === "localhost" || location.hostname === "127.0.0.1"
+  window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
     ? "http://localhost:3000"
-    : "https://tpsi-verifica.onrender.com";
+    : "https://tpsi-control.onrender.com";
 
 const token = localStorage.getItem("token");
 const storedUser = JSON.parse(localStorage.getItem("user") || "null");
@@ -16,7 +16,7 @@ const summaryBox = document.getElementById("summaryBox");
 function redirectToLogin() {
   localStorage.removeItem("token");
   localStorage.removeItem("user");
-  window.location.href = "login.html?role=admin";
+  window.location.href = "login.html";
 }
 
 if (!token || !storedUser) {
@@ -44,13 +44,6 @@ function setButtonLoading(button, isLoading, loadingText = "Caricamento...") {
     button.textContent = button.dataset.originalText || button.textContent;
     button.disabled = false;
   }
-}
-
-function getAuthHeaders(extra = {}) {
-  return {
-    ...extra,
-    Authorization: `Bearer ${token}`
-  };
 }
 
 async function fetchJson(url, options = {}) {
@@ -218,7 +211,7 @@ async function loadProducts() {
   adminProductsList.innerHTML = "";
 
   if (!products.length) {
-    adminProductsList.innerHTML = `<p>Nessun prodotto disponibile.</p>`;
+    adminProductsList.innerHTML = "<p>Nessun prodotto disponibile.</p>";
     return;
   }
 
@@ -320,7 +313,7 @@ document.getElementById("logoutBtn").addEventListener("click", async () => {
       method: "POST"
     });
   } catch {
-    // anche se fallisce, puliamo comunque lato client
+    // anche se fallisce, pulizia locale
   } finally {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -333,11 +326,7 @@ async function init() {
     setMessage("Caricamento dashboard admin...", "info");
 
     await verifyAdminAccess();
-    await Promise.all([
-      loadSummary(),
-      loadUsers(),
-      loadProducts()
-    ]);
+    await Promise.all([loadSummary(), loadUsers(), loadProducts()]);
 
     clearMessage();
   } catch (error) {
