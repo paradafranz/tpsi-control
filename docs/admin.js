@@ -1,7 +1,7 @@
 const API_BASE_URL =
   window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
     ? "http://localhost:3000"
-    : "https://tpsi-control.onrender.com";
+    : "https://tpsi-verifica.onrender.com";
 
 const token = localStorage.getItem("token");
 const storedUser = JSON.parse(localStorage.getItem("user") || "null");
