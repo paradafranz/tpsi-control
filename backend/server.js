@@ -1,17 +1,14 @@
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
-const fs = require("fs/promises");
-const path = require("path");
 const crypto = require("crypto");
+const pool = require("./db");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const USERS_FILE = path.join(__dirname, "data", "users.json");
-const PRODUCTS_FILE = path.join(__dirname, "data", "products.json");
-
-const FRONTEND_ORIGIN =
-  process.env.FRONTEND_ORIGIN || "https://paradafranz.github.io";
+const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "https://paradafranz.github.io";
 
 const ALLOWED_ORIGINS = [
   "http://127.0.0.1:5500",
@@ -61,15 +58,6 @@ function sanitizeUser(user) {
   };
 }
 
-async function readJson(filePath) {
-  const data = await fs.readFile(filePath, "utf-8");
-  return JSON.parse(data);
-}
-
-async function writeJson(filePath, data) {
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
-}
-
 function isPositiveInteger(value) {
   return Number.isInteger(value) && value > 0;
 }
@@ -92,7 +80,6 @@ function authRequired(req, res, next) {
   }
 
   const session = sessions.get(token);
-
   if (!session) {
     return res.status(401).json({ error: "Sessione non valida" });
   }
@@ -132,9 +119,7 @@ function loginRateLimit(req, res, next) {
   }
 
   if (record.count >= MAX_LOGIN_ATTEMPTS) {
-    return res.status(429).json({
-      error: "Troppi tentativi di login. Riprova più tardi."
-    });
+    return res.status(429).json({ error: "Troppi tentativi di login. Riprova più tardi." });
   }
 
   record.count += 1;
@@ -142,18 +127,8 @@ function loginRateLimit(req, res, next) {
   next();
 }
 
-let fileLock = Promise.resolve();
-
-function withFileLock(task) {
-  fileLock = fileLock.then(task, task);
-  return fileLock;
-}
-
 app.get("/", (req, res) => {
-  res.json({
-    message: "API E-Commerce attive",
-    status: "ok"
-  });
+  res.json({ message: "API E-Commerce attive", status: "ok" });
 });
 
 /* LOGIN */
@@ -161,24 +136,32 @@ app.post("/api/login", loginRateLimit, async (req, res, next) => {
   try {
     const email = String(req.body.email || "").trim().toLowerCase();
     const password = String(req.body.password || "").trim();
+    const expectedRole = String(req.body.expectedRole || "").trim().toLowerCase();
 
     if (!email || !password) {
-      return res.status(400).json({
-        error: "Email e password obbligatorie"
-      });
+      return res.status(400).json({ error: "Email e password obbligatorie" });
     }
 
-    const users = await readJson(USERS_FILE);
+    if (expectedRole && !["user", "admin"].includes(expectedRole)) {
+      return res.status(400).json({ error: "Ruolo richiesto non valido" });
+    }
 
-    const user = users.find(
-      u =>
-        String(u.email).toLowerCase() === email &&
-        String(u.password) === password
+    const result = await pool.query(
+      `select id, name, email, password, role, credits
+       from users
+       where lower(email) = $1`,
+      [email]
     );
 
-    if (!user) {
-      return res.status(401).json({
-        error: "Credenziali non valide"
+    const user = result.rows[0];
+
+    if (!user || user.password !== password) {
+      return res.status(401).json({ error: "Credenziali non valide" });
+    }
+
+    if (expectedRole && user.role !== expectedRole) {
+      return res.status(403).json({
+        error: `Questo account non può accedere alla vista ${expectedRole}`
       });
     }
 
@@ -209,14 +192,20 @@ app.post("/api/logout", authRequired, (req, res) => {
 /* UTENTE CORRENTE */
 app.get("/api/me", authRequired, async (req, res, next) => {
   try {
-    const users = await readJson(USERS_FILE);
-    const user = users.find(u => u.id === req.auth.userId);
+    const result = await pool.query(
+      `select id, name, email, role, credits
+       from users
+       where id = $1`,
+      [req.auth.userId]
+    );
+
+    const user = result.rows[0];
 
     if (!user) {
       return res.status(404).json({ error: "Utente non trovato" });
     }
 
-    res.json({ user: sanitizeUser(user) });
+    res.json({ user });
   } catch (error) {
     next(error);
   }
@@ -225,8 +214,13 @@ app.get("/api/me", authRequired, async (req, res, next) => {
 /* CATALOGO PUBBLICO */
 app.get("/api/products", async (req, res, next) => {
   try {
-    const products = await readJson(PRODUCTS_FILE);
-    res.json(products);
+    const result = await pool.query(
+      `select id, name, price, stock
+       from products
+       order by id asc`
+    );
+
+    res.json(result.rows);
   } catch (error) {
     next(error);
   }
@@ -234,6 +228,8 @@ app.get("/api/products", async (req, res, next) => {
 
 /* ACQUISTO PRODOTTO */
 app.post("/api/purchase", authRequired, async (req, res, next) => {
+  const client = await pool.connect();
+
   try {
     const productId = parseId(req.body.productId);
 
@@ -241,51 +237,108 @@ app.post("/api/purchase", authRequired, async (req, res, next) => {
       return res.status(400).json({ error: "productId non valido" });
     }
 
-    await withFileLock(async () => {
-      const users = await readJson(USERS_FILE);
-      const products = await readJson(PRODUCTS_FILE);
+    await client.query("BEGIN");
 
-      const user = users.find(u => u.id === req.auth.userId);
-      const product = products.find(p => p.id === productId);
+    const userRes = await client.query(
+      `select id, name, email, role, credits
+       from users
+       where id = $1
+       for update`,
+      [req.auth.userId]
+    );
 
-      if (!user) {
-        return res.status(404).json({ error: "Utente non trovato" });
-      }
+    const productRes = await client.query(
+      `select id, name, price, stock
+       from products
+       where id = $1
+       for update`,
+      [productId]
+    );
 
-      if (!product) {
-        return res.status(404).json({ error: "Prodotto non trovato" });
-      }
+    const user = userRes.rows[0];
+    const product = productRes.rows[0];
 
-      if (product.stock <= 0) {
-        return res.status(409).json({ error: "Prodotto esaurito" });
-      }
+    if (!user) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Utente non trovato" });
+    }
 
-      if (user.credits < product.price) {
-        return res.status(409).json({ error: "Crediti insufficienti" });
-      }
+    if (!product) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Prodotto non trovato" });
+    }
 
-      user.credits -= product.price;
-      product.stock -= 1;
+    if (product.stock <= 0) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ error: "Prodotto esaurito" });
+    }
 
-      await writeJson(USERS_FILE, users);
-      await writeJson(PRODUCTS_FILE, products);
+    if (user.credits < product.price) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ error: "Crediti insufficienti" });
+    }
 
-      return res.json({
-        message: `Acquisto completato: ${product.name}`,
-        user: sanitizeUser(user),
-        product
-      });
+    await client.query(
+      `update users
+       set credits = credits - $1
+       where id = $2`,
+      [product.price, user.id]
+    );
+
+    await client.query(
+      `update products
+       set stock = stock - 1
+       where id = $1`,
+      [product.id]
+    );
+
+    await client.query(
+      `insert into purchases (user_id, product_id, product_name, price)
+       values ($1, $2, $3, $4)`,
+      [user.id, product.id, product.name, product.price]
+    );
+
+    await client.query("COMMIT");
+
+    const updatedUserRes = await client.query(
+      `select id, name, email, role, credits
+       from users
+       where id = $1`,
+      [user.id]
+    );
+
+    const updatedProductRes = await client.query(
+      `select id, name, price, stock
+       from products
+       where id = $1`,
+      [product.id]
+    );
+
+    res.json({
+      message: `Acquisto completato: ${product.name}`,
+      user: updatedUserRes.rows[0],
+      product: updatedProductRes.rows[0]
     });
   } catch (error) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {}
     next(error);
+  } finally {
+    client.release();
   }
 });
 
 /* ADMIN - LISTA UTENTI */
 app.get("/api/admin/users", authRequired, requireRole("admin"), async (req, res, next) => {
   try {
-    const users = await readJson(USERS_FILE);
-    res.json(users.map(sanitizeUser));
+    const result = await pool.query(
+      `select id, name, email, role, credits
+       from users
+       order by id asc`
+    );
+
+    res.json(result.rows);
   } catch (error) {
     next(error);
   }
@@ -310,33 +363,21 @@ app.post("/api/admin/products", authRequired, requireRole("admin"), async (req, 
       return res.status(400).json({ error: "Stock non valido" });
     }
 
-    await withFileLock(async () => {
-      const products = await readJson(PRODUCTS_FILE);
+    const result = await pool.query(
+      `insert into products (name, price, stock)
+       values ($1, $2, $3)
+       returning id, name, price, stock`,
+      [name, price, stock]
+    );
 
-      const alreadyExists = products.some(
-        p => String(p.name).toLowerCase() === name.toLowerCase()
-      );
-
-      if (alreadyExists) {
-        return res.status(409).json({ error: "Prodotto già esistente" });
-      }
-
-      const newProduct = {
-        id: Date.now(),
-        name,
-        price,
-        stock
-      };
-
-      products.push(newProduct);
-      await writeJson(PRODUCTS_FILE, products);
-
-      return res.status(201).json({
-        message: "Prodotto creato con successo",
-        product: newProduct
-      });
+    res.status(201).json({
+      message: "Prodotto creato con successo",
+      product: result.rows[0]
     });
   } catch (error) {
+    if (error.code === "23505") {
+      return res.status(409).json({ error: "Prodotto già esistente" });
+    }
     next(error);
   }
 });
@@ -355,21 +396,21 @@ app.patch("/api/admin/products/:id/stock", authRequired, requireRole("admin"), a
       return res.status(400).json({ error: "Stock non valido" });
     }
 
-    await withFileLock(async () => {
-      const products = await readJson(PRODUCTS_FILE);
-      const product = products.find(p => p.id === productId);
+    const result = await pool.query(
+      `update products
+       set stock = $1
+       where id = $2
+       returning id, name, price, stock`,
+      [stock, productId]
+    );
 
-      if (!product) {
-        return res.status(404).json({ error: "Prodotto non trovato" });
-      }
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Prodotto non trovato" });
+    }
 
-      product.stock = stock;
-      await writeJson(PRODUCTS_FILE, products);
-
-      return res.json({
-        message: "Stock aggiornato",
-        product
-      });
+    res.json({
+      message: "Stock aggiornato",
+      product: result.rows[0]
     });
   } catch (error) {
     next(error);
@@ -390,21 +431,21 @@ app.post("/api/admin/users/:id/credits", authRequired, requireRole("admin"), asy
       return res.status(400).json({ error: "Amount non valido" });
     }
 
-    await withFileLock(async () => {
-      const users = await readJson(USERS_FILE);
-      const user = users.find(u => u.id === userId);
+    const result = await pool.query(
+      `update users
+       set credits = credits + $1
+       where id = $2
+       returning id, name, email, role, credits`,
+      [amount, userId]
+    );
 
-      if (!user) {
-        return res.status(404).json({ error: "Utente non trovato" });
-      }
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Utente non trovato" });
+    }
 
-      user.credits += amount;
-      await writeJson(USERS_FILE, users);
-
-      return res.json({
-        message: "Crediti aggiornati",
-        user: sanitizeUser(user)
-      });
+    res.json({
+      message: "Crediti aggiornati",
+      user: result.rows[0]
     });
   } catch (error) {
     next(error);
@@ -414,19 +455,29 @@ app.post("/api/admin/users/:id/credits", authRequired, requireRole("admin"), asy
 /* ADMIN - DASHBOARD */
 app.get("/api/admin/summary", authRequired, requireRole("admin"), async (req, res, next) => {
   try {
-    const users = await readJson(USERS_FILE);
-    const products = await readJson(PRODUCTS_FILE);
+    const usersRes = await pool.query(
+      `select count(*)::int as count, coalesce(sum(credits), 0)::int as total_credits
+       from users`
+    );
 
-    const totalCredits = users.reduce((sum, u) => sum + (u.credits || 0), 0);
-    const totalStock = products.reduce((sum, p) => sum + (p.stock || 0), 0);
-    const lowStockProducts = products.filter(p => p.stock <= 2);
+    const productsRes = await pool.query(
+      `select count(*)::int as count, coalesce(sum(stock), 0)::int as total_stock
+       from products`
+    );
+
+    const lowStockRes = await pool.query(
+      `select id, name, price, stock
+       from products
+       where stock <= 2
+       order by stock asc, name asc`
+    );
 
     res.json({
-      usersCount: users.length,
-      productsCount: products.length,
-      totalCredits,
-      totalStock,
-      lowStockProducts
+      usersCount: usersRes.rows[0].count,
+      productsCount: productsRes.rows[0].count,
+      totalCredits: usersRes.rows[0].total_credits,
+      totalStock: productsRes.rows[0].total_stock,
+      lowStockProducts: lowStockRes.rows
     });
   } catch (error) {
     next(error);

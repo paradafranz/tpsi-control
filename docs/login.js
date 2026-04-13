@@ -18,6 +18,12 @@ function setButtonLoading(isLoading) {
   loginBtn.textContent = isLoading ? "Accesso..." : "Accedi";
 }
 
+function getExpectedRole() {
+  const params = new URLSearchParams(window.location.search);
+  const role = params.get("role");
+  return role === "admin" ? "admin" : "user";
+}
+
 function redirectByRole(user) {
   if (user.role === "admin") {
     window.location.href = "admin.html";
@@ -46,8 +52,9 @@ async function fetchJson(url, options = {}) {
 function checkExistingSession() {
   const token = localStorage.getItem("token");
   const user = JSON.parse(localStorage.getItem("user") || "null");
+  const expectedRole = getExpectedRole();
 
-  if (token && user) {
+  if (token && user && user.role === expectedRole) {
     redirectByRole(user);
   }
 }
@@ -55,6 +62,7 @@ function checkExistingSession() {
 async function handleLogin() {
   const email = emailInput.value.trim().toLowerCase();
   const password = passwordInput.value.trim();
+  const expectedRole = getExpectedRole();
 
   if (!email) {
     setMessage("Inserisci l'email", "error");
@@ -75,7 +83,7 @@ async function handleLogin() {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email, password, expectedRole })
     });
 
     localStorage.setItem("token", data.token);
