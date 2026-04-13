@@ -126,6 +126,8 @@ function loginRateLimit(req, res, next) {
   loginAttempts.set(ip, record);
   next();
 }
+//piccolo controllo 
+console.log("DATABASE_URL presente:", !!process.env.DATABASE_URL);
 
 app.get("/", (req, res) => {
   res.json({ message: "API E-Commerce attive", status: "ok" });
@@ -145,6 +147,8 @@ app.post("/api/login", loginRateLimit, async (req, res, next) => {
     if (expectedRole && !["user", "admin"].includes(expectedRole)) {
       return res.status(400).json({ error: "Ruolo richiesto non valido" });
     }
+    //piccolo controllo login
+    console.log("Tentativo login:", req.body.email);
 
     const result = await pool.query(
       `select id, name, email, password, role, credits
