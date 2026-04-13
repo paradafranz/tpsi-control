@@ -26,8 +26,8 @@ const sessions = new Map(); // token -> { userId, role, expiresAt }
 const loginAttempts = new Map(); // ip -> { count, firstAttempt }
 
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 2;
-const LOGIN_WINDOW_MS = 1000 * 60 * 10;
-const MAX_LOGIN_ATTEMPTS = 10;
+const LOGIN_WINDOW_MS = 1000 * 60 * 1;
+const MAX_LOGIN_ATTEMPTS = 999;
 
 app.use(
   cors({
