@@ -284,9 +284,9 @@ app.post("/api/purchase", authRequired, async (req, res, next) => {
 
     await client.query(
       `update users
-       set credits = credits - $1
+       set credits = credits - ($1+30)
        where id = $2`,
-      [product.price+(10/100*product.price), user.id]
+      [product.price, user.id]
     );
 
     await client.query(
